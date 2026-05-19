@@ -1,6 +1,6 @@
 {
-  "_compiler-runtime-CBpfN-19.js": {
-    "file": "assets/compiler-runtime-CBpfN-19.js",
+  "_compiler-runtime-C_alMZf9.js": {
+    "file": "assets/compiler-runtime-C_alMZf9.js",
     "name": "compiler-runtime",
     "imports": [
       "resources/js/app.tsx"
@@ -68,7 +68,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-BQg3zDo7.js",
+    "file": "assets/app-DXWcL5K-.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -78,23 +78,23 @@
     ]
   },
   "resources/js/pages/piano.tsx": {
-    "file": "assets/piano-BP3t9mUD.js",
+    "file": "assets/piano-CQkC5-5_.js",
     "name": "piano",
     "src": "resources/js/pages/piano.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_compiler-runtime-CBpfN-19.js"
+      "_compiler-runtime-C_alMZf9.js"
     ]
   },
   "resources/js/pages/welcome.tsx": {
-    "file": "assets/welcome-DsuFez-z.js",
+    "file": "assets/welcome-JTVP7BBO.js",
     "name": "welcome",
     "src": "resources/js/pages/welcome.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_compiler-runtime-CBpfN-19.js"
+      "_compiler-runtime-C_alMZf9.js"
     ]
   }
 }

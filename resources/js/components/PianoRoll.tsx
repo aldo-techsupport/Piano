@@ -21,14 +21,25 @@ function isBlackKey(midi: number): boolean {
     return [1, 3, 6, 8, 10].includes(mod);
 }
 
-/** Count white keys from PIANO_MIN up to (not including) midi */
-function whiteKeyIndex(midi: number): number {
-    let count = 0;
-    for (let m = PIANO_MIN; m < midi; m++) {
-        if (!isBlackKey(m)) count++;
-    }
-    return count;
+/** Build a lookup table matching SynthesiaPiano's key positioning exactly */
+interface KeyPos {
+    isBlack: boolean;
+    whiteIndex: number; // for black keys: the white key index to the LEFT
 }
+
+const KEY_POS_MAP: Map<number, KeyPos> = (() => {
+    const map = new Map<number, KeyPos>();
+    let whiteIdx = 0;
+    for (let m = PIANO_MIN; m <= PIANO_MAX; m++) {
+        const black = isBlackKey(m);
+        map.set(m, {
+            isBlack: black,
+            whiteIndex: black ? whiteIdx - 1 : whiteIdx,
+        });
+        if (!black) whiteIdx++;
+    }
+    return map;
+})();
 
 const TOTAL_WHITE_KEYS = (() => {
     let count = 0;
@@ -37,6 +48,10 @@ const TOTAL_WHITE_KEYS = (() => {
     }
     return count;
 })();
+
+// Black key offset within white key width — must match SynthesiaPiano
+const BLACK_OFFSET = 0.6;
+const BLACK_WIDTH_FACTOR = 0.65;
 
 export default function PianoRoll({
     midiData,
@@ -101,13 +116,13 @@ export default function PianoRoll({
                 ctx.stroke();
             }
 
-            // Shade black key lanes
+            // Shade black key lanes (matching SynthesiaPiano positioning)
             ctx.fillStyle = 'rgba(0,0,0,0.25)';
             for (let m = PIANO_MIN; m <= PIANO_MAX; m++) {
                 if (isBlackKey(m)) {
-                    const leftWhite = whiteKeyIndex(m);
-                    const x = leftWhite * whiteW + whiteW * 0.6;
-                    const w = whiteW * 0.8;
+                    const pos = KEY_POS_MAP.get(m)!;
+                    const x = (pos.whiteIndex + BLACK_OFFSET) * whiteW;
+                    const w = whiteW * BLACK_WIDTH_FACTOR;
                     ctx.fillRect(x, 0, w, H);
                 }
             }
@@ -131,18 +146,18 @@ export default function PianoRoll({
                     if (noteStart > currentTime + currentLookahead) continue;
 
                     const black = isBlackKey(note.midi);
+                    const pos = KEY_POS_MAP.get(note.midi);
+                    if (!pos) continue;
 
-                    // X position
+                    // X position — matching SynthesiaPiano exactly
                     let x: number;
                     let w: number;
                     if (!black) {
-                        const wi = whiteKeyIndex(note.midi);
-                        x = wi * whiteW + 1;
+                        x = pos.whiteIndex * whiteW + 1;
                         w = whiteW - 2;
                     } else {
-                        const leftWhite = whiteKeyIndex(note.midi);
-                        x = leftWhite * whiteW + whiteW * 0.6 + 1;
-                        w = whiteW * 0.8 - 2;
+                        x = (pos.whiteIndex + BLACK_OFFSET) * whiteW + 1;
+                        w = whiteW * BLACK_WIDTH_FACTOR - 2;
                     }
 
                     // Y position: notes fall from top to bottom
