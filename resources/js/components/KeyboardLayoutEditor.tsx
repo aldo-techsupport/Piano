@@ -36,6 +36,19 @@ export const LAYOUT_PRESETS: Record<string, { label: string; map: KeyboardMap }>
             p: 'A#4',
         },
     },
+    glimpse_of_us: {
+        label: '🎵 Glimpse of Us',
+        map: {
+            // Baris bawah (Z-M): Oktaf 3 — note yang dipakai di lagu
+            z: 'C3', x: 'C#3', c: 'D#3', v: 'F3', b: 'G3', n: 'G#3', m: 'A#2',
+            // Baris tengah (A-;): Oktaf 4 — note utama melodi
+            a: 'C4', s: 'C#4', d: 'D#4', f: 'F4', g: 'G4', h: 'G#4', j: 'A#4', k: 'C5',
+            // Baris atas (Q-P): Oktaf 5 — note tinggi
+            q: 'C5', w: 'C#5', e: 'D#5', r: 'F5', t: 'G5', y: 'G#5', u: 'A#5', i: 'C6', o: 'C#6',
+            // Angka untuk note rendah tambahan
+            '1': 'D#2', '2': 'A#2',
+        },
+    },
 };
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];

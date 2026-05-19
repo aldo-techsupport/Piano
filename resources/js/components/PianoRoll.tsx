@@ -1,15 +1,15 @@
 import { useEffect, useRef } from 'react';
+import * as Tone from 'tone';
 import type { MidiData } from '../hooks/useMidi';
 
 interface PianoRollProps {
     midiData: MidiData | null;
-    progress: number; // current playback time in seconds
+    progress: number; // fallback progress (used when Transport not running)
     isPlaying: boolean;
-    /** Total MIDI range to display: lowest and highest MIDI note number */
-    midiMin?: number;
-    midiMax?: number;
     /** How many seconds of notes are visible in the roll */
     lookahead?: number;
+    /** Speed multiplier — needed to convert Transport.seconds back to original time */
+    speed?: number;
 }
 
 // MIDI note 0 = C-1, 21 = A0 (piano start), 108 = C8 (piano end)
@@ -43,9 +43,22 @@ export default function PianoRoll({
     progress,
     isPlaying,
     lookahead = 4,
+    speed = 1,
 }: PianoRollProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const animFrameRef = useRef<number>(0);
+    // Store latest props in refs so the animation loop always reads fresh values
+    const midiDataRef = useRef(midiData);
+    const progressRef = useRef(progress);
+    const isPlayingRef = useRef(isPlaying);
+    const speedRef = useRef(speed);
+    const lookaheadRef = useRef(lookahead);
+
+    midiDataRef.current = midiData;
+    progressRef.current = progress;
+    isPlayingRef.current = isPlaying;
+    speedRef.current = speed;
+    lookaheadRef.current = lookahead;
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -56,6 +69,20 @@ export default function PianoRoll({
         const draw = () => {
             const W = canvas.width;
             const H = canvas.height;
+            const data = midiDataRef.current;
+            const currentLookahead = lookaheadRef.current;
+            const currentSpeed = speedRef.current;
+
+            // Get current time directly from Tone.Transport for perfect sync
+            // Transport.seconds is in "scaled time" (original / speed)
+            // Multiply by speed to get position in original note.time space
+            let currentTime: number;
+            if (Tone.Transport.state === 'started') {
+                currentTime = Tone.Transport.seconds * currentSpeed;
+            } else {
+                // Fallback to prop when paused/stopped
+                currentTime = progressRef.current;
+            }
 
             // Background
             ctx.fillStyle = '#1a1a1a';
@@ -78,7 +105,6 @@ export default function PianoRoll({
             ctx.fillStyle = 'rgba(0,0,0,0.25)';
             for (let m = PIANO_MIN; m <= PIANO_MAX; m++) {
                 if (isBlackKey(m)) {
-                    // Find the white key to the left
                     const leftWhite = whiteKeyIndex(m);
                     const x = leftWhite * whiteW + whiteW * 0.6;
                     const w = whiteW * 0.8;
@@ -89,87 +115,80 @@ export default function PianoRoll({
             // Red line at bottom (playhead)
             const playheadY = H - 4;
             ctx.fillStyle = '#cc0000';
-            ctx.fillRect(0, playheadY, W, 2);
+            ctx.fillRect(0, playheadY, W, 3);
 
-            if (!midiData) {
-                animFrameRef.current = requestAnimationFrame(draw);
-                return;
-            }
+            if (data) {
+                const pixelsPerSecond = H / currentLookahead;
 
-            const currentTime = progress;
-            const pixelsPerSecond = H / lookahead;
+                // Draw notes
+                for (let i = 0; i < data.notes.length; i++) {
+                    const note = data.notes[i];
+                    const noteStart = note.time;
+                    const noteEnd = note.time + note.duration;
 
-            // Draw notes
-            midiData.notes.forEach((note) => {
-                const noteStart = note.time;
-                const noteEnd = note.time + note.duration;
+                    // Only draw notes that are visible in the window
+                    if (noteEnd < currentTime - 0.1) continue;
+                    if (noteStart > currentTime + currentLookahead) continue;
 
-                // Only draw notes that are visible in the window
-                // Notes visible: from currentTime to currentTime + lookahead
-                if (noteEnd < currentTime - 0.1) return;
-                if (noteStart > currentTime + lookahead) return;
+                    const black = isBlackKey(note.midi);
 
-                const black = isBlackKey(note.midi);
+                    // X position
+                    let x: number;
+                    let w: number;
+                    if (!black) {
+                        const wi = whiteKeyIndex(note.midi);
+                        x = wi * whiteW + 1;
+                        w = whiteW - 2;
+                    } else {
+                        const leftWhite = whiteKeyIndex(note.midi);
+                        x = leftWhite * whiteW + whiteW * 0.6 + 1;
+                        w = whiteW * 0.8 - 2;
+                    }
 
-                // X position
-                let x: number;
-                let w: number;
-                if (!black) {
-                    const wi = whiteKeyIndex(note.midi);
-                    x = wi * whiteW + 1;
-                    w = whiteW - 2;
-                } else {
-                    const leftWhite = whiteKeyIndex(note.midi);
-                    x = leftWhite * whiteW + whiteW * 0.6 + 1;
-                    w = whiteW * 0.8 - 2;
-                }
+                    // Y position: notes fall from top to bottom
+                    // At currentTime, note should be at playheadY
+                    // Future notes (noteStart > currentTime) are above playhead
+                    const yBottom = playheadY - (noteStart - currentTime) * pixelsPerSecond;
+                    const yTop = playheadY - (noteEnd - currentTime) * pixelsPerSecond;
+                    const noteH = Math.max(yBottom - yTop, 3);
 
-                // Y position: notes fall from top to bottom
-                // At currentTime, note is at playheadY
-                // Future notes (noteStart > currentTime) are above playhead
-                const yBottom = playheadY - (noteStart - currentTime) * pixelsPerSecond;
-                const yTop = playheadY - (noteEnd - currentTime) * pixelsPerSecond;
-                const noteH = Math.max(yBottom - yTop, 3);
+                    // Color: yellow/gold like Synthesia
+                    const isActive = noteStart <= currentTime && noteEnd >= currentTime;
+                    if (isActive) {
+                        ctx.fillStyle = '#f5e642';
+                        ctx.shadowColor = '#f5e642';
+                        ctx.shadowBlur = 12;
+                    } else {
+                        ctx.fillStyle = '#c8bc2a';
+                        ctx.shadowBlur = 0;
+                    }
 
-                // Color: yellow/gold like Synthesia
-                const isActive = noteStart <= currentTime && noteEnd >= currentTime;
-                if (isActive) {
-                    // Bright yellow when playing
-                    ctx.fillStyle = '#f5e642';
-                    // Glow effect
-                    ctx.shadowColor = '#f5e642';
-                    ctx.shadowBlur = 12;
-                } else {
-                    // Slightly dimmer yellow for upcoming notes
-                    ctx.fillStyle = '#c8bc2a';
+                    const radius = Math.min(4, w / 3, noteH / 3);
+                    ctx.beginPath();
+                    ctx.roundRect(x, yTop, w, noteH, radius);
+                    ctx.fill();
                     ctx.shadowBlur = 0;
                 }
-
-                const radius = Math.min(4, w / 3, noteH / 3);
-                ctx.beginPath();
-                ctx.roundRect(x, yTop, w, noteH, radius);
-                ctx.fill();
-                ctx.shadowBlur = 0;
-            });
+            }
 
             animFrameRef.current = requestAnimationFrame(draw);
         };
 
         animFrameRef.current = requestAnimationFrame(draw);
         return () => cancelAnimationFrame(animFrameRef.current);
-    }, [midiData, progress, isPlaying, lookahead]);
+    }, []); // Empty deps — loop runs forever, reads from refs
 
     // Resize canvas to match container
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
         const observer = new ResizeObserver(() => {
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
+            canvas.width = canvas.offsetWidth * (window.devicePixelRatio || 1);
+            canvas.height = canvas.offsetHeight * (window.devicePixelRatio || 1);
         });
         observer.observe(canvas);
-        canvas.width = canvas.offsetWidth;
-        canvas.height = canvas.offsetHeight;
+        canvas.width = canvas.offsetWidth * (window.devicePixelRatio || 1);
+        canvas.height = canvas.offsetHeight * (window.devicePixelRatio || 1);
         return () => observer.disconnect();
     }, []);
 

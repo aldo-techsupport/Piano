@@ -2,7 +2,7 @@ import { Head } from '@inertiajs/react';
 import { useCallback, useEffect, useState } from 'react';
 import * as Tone from 'tone';
 import InstrumentPicker from '../components/InstrumentPicker';
-import KeyboardLayoutEditor, { DEFAULT_KEYBOARD_MAP, type KeyboardMap } from '../components/KeyboardLayoutEditor';
+import KeyboardLayoutEditor, { DEFAULT_KEYBOARD_MAP, LAYOUT_PRESETS, type KeyboardMap } from '../components/KeyboardLayoutEditor';
 import MidiControls from '../components/MidiControls';
 import PianoRoll from '../components/PianoRoll';
 import SpeedControl from '../components/SpeedControl';
@@ -93,7 +93,7 @@ export default function Piano() {
     const currentInstrument = INSTRUMENTS.find((i) => i.id === instrumentId);
 
     // ── Keyboard layout ───────────────────────────────────────────────────
-    const [keyboardMap, setKeyboardMap] = useState<KeyboardMap>(DEFAULT_KEYBOARD_MAP);
+    const [keyboardMap, setKeyboardMap] = useState<KeyboardMap>(LAYOUT_PRESETS.glimpse_of_us?.map ?? DEFAULT_KEYBOARD_MAP);
     const [showLayoutEditor, setShowLayoutEditor] = useState(false);
 
     return (
@@ -111,6 +111,7 @@ export default function Piano() {
                         progress={progress}
                         isPlaying={isPlaying || isPaused}
                         lookahead={4}
+                        speed={speed}
                     />
 
                     {/* Instrument Picker — top left */}

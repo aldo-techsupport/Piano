@@ -141,7 +141,7 @@ export function useMidi(
                         if (!synth) return;
                         const scaledVelocity = Math.min(
                             1,
-                            note.velocity * Math.pow(10, clampedDb / 20),
+                            Math.max(0.3, note.velocity * 3) * Math.pow(10, clampedDb / 20),
                         );
                         synth.triggerAttackRelease(
                             note.name,
