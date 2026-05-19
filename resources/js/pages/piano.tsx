@@ -55,7 +55,7 @@ export default function Piano() {
     }, []);
 
     // ── MIDI playback ─────────────────────────────────────────────────────
-    const { loadAndPlay, stop, pause, resume, status, progress, duration, midiData, bpm, setBpm, speed, setSpeed, originalBpm } = useMidi(
+    const { loadAndPlay, stop, pause, resume, seek, status, progress, duration, midiData, bpm, setBpm, speed, setSpeed, originalBpm } = useMidi(
         synthRef,
         ensureReady,
         handleMidiNoteOn,
@@ -200,6 +200,7 @@ export default function Piano() {
                         onStop={stop}
                         onPause={pause}
                         onResume={resume}
+                        onSeek={seek}
                         playError={playError}
                     />
                 </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MidiStatus } from '../hooks/useMidi';
 import type { MidiFile } from '../types/piano';
 
@@ -10,6 +10,7 @@ interface MidiControlsProps {
     onStop: () => void;
     onPause: () => void;
     onResume: () => void;
+    onSeek?: (time: number) => void;
     playError?: string | null;
 }
 
@@ -21,6 +22,7 @@ export default function MidiControls({
     onStop,
     onPause,
     onResume,
+    onSeek,
     playError: externalPlayError,
 }: MidiControlsProps) {
     const [serverFiles, setServerFiles] = useState<MidiFile[]>([]);
@@ -30,6 +32,11 @@ export default function MidiControls({
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [showFileList, setShowFileList] = useState(false);
     const [playError, setPlayError] = useState<string | null>(null);
+
+    // Seek state
+    const progressBarRef = useRef<HTMLDivElement>(null);
+    const isSeeking = useRef(false);
+    const [seekPreview, setSeekPreview] = useState<number | null>(null);
 
     const fetchFiles = useCallback(async (): Promise<MidiFile[]> => {
         try {
@@ -106,7 +113,41 @@ export default function MidiControls({
         return `${m}:${sec.toString().padStart(2, '0')}`;
     };
 
-    const progressPct = duration > 0 ? (progress / duration) * 100 : 0;
+    // Hitung posisi seek dari event mouse/touch pada progress bar
+    const getSeekTime = useCallback((clientX: number): number => {
+        const bar = progressBarRef.current;
+        if (!bar || duration <= 0) return 0;
+        const rect = bar.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+        return ratio * duration;
+    }, [duration]);
+
+    const handleSeekStart = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+        if (!onSeek || duration <= 0) return;
+        isSeeking.current = true;
+        const time = getSeekTime(e.clientX);
+        setSeekPreview(time);
+
+        const handleMouseMove = (ev: MouseEvent) => {
+            const t = getSeekTime(ev.clientX);
+            setSeekPreview(t);
+        };
+        const handleMouseUp = (ev: MouseEvent) => {
+            if (isSeeking.current) {
+                const t = getSeekTime(ev.clientX);
+                onSeek(t);
+                isSeeking.current = false;
+                setSeekPreview(null);
+            }
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+    }, [onSeek, duration, getSeekTime]);
+
+    const displayProgress = seekPreview !== null ? seekPreview : progress;
+    const progressPct = duration > 0 ? (displayProgress / duration) * 100 : 0;
     const isPlaying = status === 'playing';
     const isPaused = status === 'paused';
     const isLoading = status === 'loading';
@@ -180,18 +221,31 @@ export default function MidiControls({
 
                 {/* Time */}
                 <span className="w-20 shrink-0 text-right font-mono text-xs text-gray-400">
-                    {formatTime(progress)} / {formatTime(duration)}
+                    {formatTime(displayProgress)} / {formatTime(duration)}
                 </span>
 
                 {/* Progress bar */}
-                <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-gray-700">
+                <div
+                    ref={progressBarRef}
+                    onMouseDown={handleSeekStart}
+                    className={[
+                        'relative h-2 flex-1 rounded-full bg-gray-700',
+                        onSeek && duration > 0 ? 'cursor-pointer' : '',
+                    ].join(' ')}
+                >
                     <div
                         className="h-full rounded-full bg-green-500 transition-none"
                         style={{ width: `${progressPct}%` }}
                     />
-                    {/* Red dot at end */}
+                    {/* Seek handle */}
                     <div
-                        className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-red-500 shadow"
+                        className={[
+                            'absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full shadow transition-transform',
+                            seekPreview !== null
+                                ? 'scale-125 bg-amber-400'
+                                : 'bg-red-500',
+                            onSeek && duration > 0 ? 'hover:scale-125' : '',
+                        ].join(' ')}
                         style={{ left: `calc(${progressPct}% - 6px)` }}
                     />
                 </div>

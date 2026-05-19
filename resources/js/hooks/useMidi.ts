@@ -244,6 +244,26 @@ export function useMidi(
     }, []);
 
     /**
+     * Seek ke posisi tertentu (dalam detik "note.time space" / detik asli).
+     */
+    const seek = useCallback((targetOriginalTime: number) => {
+        const midi = parsedMidiRef.current;
+        if (!midi) return;
+
+        const clampedTime = Math.max(0, Math.min(targetOriginalTime, totalDurationRef.current));
+        const wasPlaying = Tone.Transport.state === 'started';
+
+        scheduleAndPlay(midi, totalDurationRef.current, speedRef.current, clampedTime);
+
+        if (!wasPlaying) {
+            Tone.Transport.pause();
+            setStatus('paused');
+            clearProgress();
+            setProgress(clampedTime);
+        }
+    }, [scheduleAndPlay, clearProgress]);
+
+    /**
      * Ubah speed (multiplier).
      * Re-schedule semua note dari posisi saat ini dengan speed baru.
      */
@@ -302,5 +322,6 @@ export function useMidi(
         originalBpm: originalBpmRef.current,
         setBpm,
         setSpeed,
+        seek,
     };
 }
