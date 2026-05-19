@@ -1,11 +1,15 @@
 import { useCallback, useState } from 'react';
 import * as Tone from 'tone';
-import type { useSynth } from './useSynth';
+import type { SynthInstance } from './useSynth';
+import { releaseAllNotes } from './useSynth';
 
 /**
  * Piano manual — pakai shared synthRef dari useSynth.
  */
-export function usePiano(synthRef: ReturnType<typeof useSynth>['synthRef'], ensureReady: () => Promise<void>) {
+export function usePiano(
+    synthRef: React.MutableRefObject<SynthInstance | null>,
+    ensureReady: () => Promise<void>,
+) {
     const [activeNotes, setActiveNotes] = useState<Set<string>>(new Set());
 
     const playNote = useCallback(
@@ -30,7 +34,7 @@ export function usePiano(synthRef: ReturnType<typeof useSynth>['synthRef'], ensu
     );
 
     const stopAllNotes = useCallback(() => {
-        synthRef.current?.releaseAll();
+        releaseAllNotes(synthRef.current);
         setActiveNotes(new Set());
     }, [synthRef]);
 

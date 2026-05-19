@@ -1,10 +1,18 @@
 /**
  * Shared synth instance — satu synth dipakai oleh piano manual DAN MIDI playback.
  * Ganti instrumen langsung swap synth tanpa perlu restart playback.
+ *
+ * Mendukung Tone.PolySynth DAN Tone.Sampler (untuk instrumen sample-based).
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Tone from 'tone';
 import { INSTRUMENT_MAP, INSTRUMENTS } from '../lib/instruments';
+
+/**
+ * Union type for our synth instances.
+ * Both PolySynth and Sampler share: triggerAttack, triggerRelease, triggerAttackRelease, dispose, connect
+ */
+export type SynthInstance = Tone.PolySynth | Tone.Sampler;
 
 // Compressor + limiter chain — shared, tidak di-dispose saat ganti instrumen
 let masterCompressor: Tone.Compressor | null = null;
@@ -26,23 +34,35 @@ function getMasterChain(): { compressor: Tone.Compressor; limiter: Tone.Limiter 
     return { compressor: masterCompressor, limiter: masterLimiter };
 }
 
+/**
+ * Release all notes on a synth instance (works for both PolySynth and Sampler).
+ */
+export function releaseAllNotes(synth: SynthInstance | null): void {
+    if (!synth) return;
+    if (synth instanceof Tone.PolySynth) {
+        synth.releaseAll();
+    } else if (synth instanceof Tone.Sampler) {
+        synth.releaseAll();
+    }
+}
+
 export function useSynth() {
-    const synthRef = useRef<Tone.PolySynth | null>(null);
+    const synthRef = useRef<SynthInstance | null>(null);
     const [instrumentId, setInstrumentIdState] = useState('piano');
     // Expose ref so useMidi can always read the latest synth
     const instrumentIdRef = useRef('piano');
 
-    const buildSynth = useCallback((id: string): Tone.PolySynth => {
+    const buildSynth = useCallback((id: string): SynthInstance => {
         // Release all notes on old synth before disposing
-        synthRef.current?.releaseAll();
+        releaseAllNotes(synthRef.current);
         synthRef.current?.dispose();
 
         const def = INSTRUMENT_MAP[id] ?? INSTRUMENTS[0];
-        const synth = def.createSynth() as Tone.PolySynth;
+        const synth = def.createSynth();
 
-        // Set high voice count so dense MIDI (Rush E, etc.) doesn't drop notes
-        if (typeof (synth as Tone.PolySynth).maxPolyphony !== 'undefined') {
-            (synth as Tone.PolySynth).maxPolyphony = 128;
+        // Set high voice count for PolySynth so dense MIDI doesn't drop notes
+        if (synth instanceof Tone.PolySynth) {
+            synth.maxPolyphony = 128;
         }
 
         // Route through compressor → limiter → destination

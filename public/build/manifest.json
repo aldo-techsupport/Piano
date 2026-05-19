@@ -1,6 +1,6 @@
 {
-  "_compiler-runtime-CVfxpWGD.js": {
-    "file": "assets/compiler-runtime-CVfxpWGD.js",
+  "_compiler-runtime-BNyxJo6v.js": {
+    "file": "assets/compiler-runtime-BNyxJo6v.js",
     "name": "compiler-runtime",
     "imports": [
       "resources/js/app.tsx"
@@ -59,7 +59,7 @@
     "src": "_instrument-sans-600-normal-DMks36a2.woff"
   },
   "resources/css/app.css": {
-    "file": "assets/app-DP4gOCff.css",
+    "file": "assets/app-DC-ru19y.css",
     "name": "app",
     "names": [
       "app.css"
@@ -68,7 +68,7 @@
     "isEntry": true
   },
   "resources/js/app.tsx": {
-    "file": "assets/app-BZEjaK3M.js",
+    "file": "assets/app-Sb6RqKxN.js",
     "name": "app",
     "src": "resources/js/app.tsx",
     "isEntry": true,
@@ -78,23 +78,23 @@
     ]
   },
   "resources/js/pages/piano.tsx": {
-    "file": "assets/piano-y6PtVkE-.js",
+    "file": "assets/piano-BluL8CAQ.js",
     "name": "piano",
     "src": "resources/js/pages/piano.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_compiler-runtime-CVfxpWGD.js"
+      "_compiler-runtime-BNyxJo6v.js"
     ]
   },
   "resources/js/pages/welcome.tsx": {
-    "file": "assets/welcome-tRZmfMKR.js",
+    "file": "assets/welcome-DXGV_rxY.js",
     "name": "welcome",
     "src": "resources/js/pages/welcome.tsx",
     "isDynamicEntry": true,
     "imports": [
       "resources/js/app.tsx",
-      "_compiler-runtime-CVfxpWGD.js"
+      "_compiler-runtime-BNyxJo6v.js"
     ]
   }
 }

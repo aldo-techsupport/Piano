@@ -1,7 +1,8 @@
 import { Midi } from '@tonejs/midi';
 import { useCallback, useRef, useState } from 'react';
 import * as Tone from 'tone';
-import type { useSynth } from './useSynth';
+import type { SynthInstance } from './useSynth';
+import { releaseAllNotes } from './useSynth';
 
 export type MidiStatus = 'idle' | 'loading' | 'playing' | 'paused' | 'stopped';
 
@@ -32,7 +33,7 @@ export interface MidiData {
  *   yaitu Transport.seconds * speed.
  */
 export function useMidi(
-    synthRef: ReturnType<typeof useSynth>['synthRef'],
+    synthRef: React.MutableRefObject<SynthInstance | null>,
     ensureReady: () => Promise<void>,
     onNoteOn?: (note: string) => void,
     onNoteOff?: (note: string) => void,
@@ -74,7 +75,7 @@ export function useMidi(
     const stop = useCallback(() => {
         Tone.Transport.stop();
         Tone.Transport.cancel();
-        synthRef.current?.releaseAll();
+        releaseAllNotes(synthRef.current);
         clearProgress();
         setStatus('stopped');
         setProgress(0);
@@ -82,7 +83,7 @@ export function useMidi(
 
     const pause = useCallback(() => {
         Tone.Transport.pause();
-        synthRef.current?.releaseAll();
+        releaseAllNotes(synthRef.current);
         clearProgress();
         setStatus('paused');
     }, [clearProgress, synthRef]);
